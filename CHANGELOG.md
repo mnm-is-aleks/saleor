@@ -81,6 +81,10 @@ in 3.17. Use `PaymentSettings.defaultTransactionFlowStrategy` instead.
     1. Shipping address
     2. Billing address
     3. Channel's default country
+      1. Shipping address
+      2. Billing address
+      3. Channel's default country
+- Page -> Attributes refactor. The goal is to simplify the attribute models. The current attribute model relations are complex and really hard to understand. - #13621 by @michal.macioszczyk
 
 ### GraphQL API
 
