@@ -1,14 +1,11 @@
 from collections import defaultdict
 
-from ...attribute.models import AttributePage
-from ...attribute.utils import get_page_attribute_values, get_page_attributes
+from ...attribute.models import AssignedPageAttributeValue, AttributePage
 from ...page.models import Page, PageType
 from ...permission.enums import PagePermissions
 from ..attribute.dataloaders import AttributesByAttributeId
 from ..core.dataloaders import DataLoader
 from ..utils import get_user_or_app_from_context
-
-# from promise import Promise
 
 
 class PageByIdLoader(DataLoader):
@@ -91,25 +88,50 @@ class AttributeValuesByPageIdLoader(DataLoader):
     context_key = "attributevalues_by_page"
 
     def batch_load(self, keys):
-        pages = Page.objects.filter(pk__in=keys)
+        attribute_values = list(
+            AssignedPageAttributeValue.objects.using(self.database_connection_name)
+            .filter(page_id__in=keys)
+            .prefetch_related("value")
+        )
 
-        assigned_page_map = defaultdict(list)
-        for page in pages:
-            qs = get_page_attributes(page).using(self.database_connection_name)
+        def with_pages(pages):
+            pages = [page for page in pages if page]
+            page_type_ids = [p.page_type_id for p in pages]
 
-            for attribute in qs.iterator():
-                values = get_page_attribute_values(page, attribute).using(
-                    self.database_connection_name
-                )
+            def with_attributes(attribute_pages):
+                page_type_attrubutes = dict(zip(page_type_ids, attribute_pages))
+                assigned_page_map = defaultdict(list)
 
-                assigned_page_map[page.id].append(
-                    {
-                        "attribute": attribute,
-                        "values": values,
-                    }
-                )
+                for page in pages:
+                    page_values = [
+                        page_value.value
+                        for page_value in attribute_values
+                        if page_value.page_id == page.id
+                    ]
 
-        return [assigned_page_map[key] for key in keys]
+                    attributes = page_type_attrubutes[page.page_type_id]
+                    for attribute_tuple in attributes:
+                        attribute = attribute_tuple
+                        values = [
+                            value
+                            for value in page_values
+                            if value.attribute_id == attribute.id
+                        ]
+                        assigned_page_map[page.id].append(
+                            {
+                                "attribute": attribute,
+                                "values": values,
+                            }
+                        )
+                return [assigned_page_map[key] for key in keys]
+
+            return (
+                PageAttributesByPageTypeIdLoader(self.context)
+                .load_many(page_type_ids)
+                .then(with_attributes)
+            )
+
+        return PageByIdLoader(self.context).load_many(keys).then(with_pages)
 
 
 class SelectedAttributesByPageIdLoader(DataLoader):
