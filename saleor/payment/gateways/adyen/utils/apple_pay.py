@@ -5,6 +5,7 @@ from urllib.parse import urlsplit
 
 import requests
 
+from ..... import user_agent_version
 from .....core.http_client import HTTPClient
 from .... import PaymentError
 
@@ -109,6 +110,7 @@ def make_request_to_initialize_apple_pay(
             cert=f.name,
             timeout=30,
             allow_redirects=False,
+            headers={"User-Agent": user_agent_version},
         )
 
 

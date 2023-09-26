@@ -193,7 +193,11 @@ def fetch_brand_data_async(
 def fetch_manifest(manifest_url: str, timeout=REQUEST_TIMEOUT):
     headers = {AppHeaders.SCHEMA_VERSION: schema_version}
     response = HTTPClient.send_request(
-        "GET", manifest_url, headers=headers, timeout=timeout, allow_redirects=False
+        "GET",
+        manifest_url,
+        headers=headers,
+        timeout=timeout,
+        allow_redirects=False,
     )
     response.raise_for_status()
     return response.json()
@@ -259,7 +263,9 @@ def install_app(app_installation: AppInstallation, activate: bool = False):
             )
     WebhookEvent.objects.bulk_create(webhook_events)
 
-    _, token = app.tokens.create(name="Default token")  # type: ignore[call-arg] # calling create on a related manager # noqa: E501
+    _, token = app.tokens.create(
+        name="Default token"
+    )  # type: ignore[call-arg] # calling create on a related manager # noqa: E501
 
     try:
         send_app_token(target_url=manifest_data.get("tokenTargetUrl"), token=token)

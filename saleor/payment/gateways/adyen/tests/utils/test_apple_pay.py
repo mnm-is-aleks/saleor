@@ -3,6 +3,7 @@ from unittest import mock
 import pytest
 from requests_hardened import HTTPSession
 
+from saleor import user_agent_version
 from saleor.payment import PaymentError
 from saleor.payment.gateways.adyen.utils.apple_pay import (
     initialize_apple_pay_session,
@@ -118,6 +119,7 @@ def test_initialize_payment_for_apple_pay(mocked_request, mocked_tmp_file):
         cert=mocked_cert_file_name,
         timeout=30,
         allow_redirects=False,
+        headers={"User-Agent": user_agent_version},
     )
 
 
