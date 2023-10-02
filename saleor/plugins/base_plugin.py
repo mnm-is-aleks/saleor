@@ -32,7 +32,12 @@ from ..payment.interface import (
     ListStoredPaymentMethodsRequestData,
     PaymentData,
     PaymentGateway,
+    PaymentGatewayInitializeTokenizationRequestData,
+    PaymentGatewayInitializeTokenizationResponseData,
     PaymentMethodData,
+    PaymentMethodInitializeTokenizationRequestData,
+    PaymentMethodProcessTokenizationRequestData,
+    PaymentMethodTokenizationResponseData,
     StoredPaymentMethodRequestDeleteData,
     StoredPaymentMethodRequestDeleteResponseData,
     TransactionActionData,
@@ -51,6 +56,7 @@ if TYPE_CHECKING:
     from ..core.middleware import Requestor
     from ..core.notify_events import NotifyEventType
     from ..core.taxes import TaxData, TaxType
+    from ..csv.models import ExportFile
     from ..discount.models import Sale, Voucher
     from ..giftcard.models import GiftCard
     from ..invoice.models import Invoice
@@ -663,6 +669,12 @@ class BasePlugin:
     # status is changed.
     gift_card_status_changed: Callable[["GiftCard", None], None]
 
+    # Trigger when gift cards export is completed.
+    #
+    # Overwrite this method if you need to trigger specific logic after a gift cards
+    # export is completed.
+    gift_card_export_completed: Callable[["ExportFile", None], None]
+
     initialize_payment: Callable[
         [dict, Optional[InitializedPaymentResponse]], InitializedPaymentResponse
     ]
@@ -696,6 +708,30 @@ class BasePlugin:
             "StoredPaymentMethodRequestDeleteResponseData",
         ],
         "StoredPaymentMethodRequestDeleteResponseData",
+    ]
+
+    payment_gateway_initialize_tokenization: Callable[
+        [
+            "PaymentGatewayInitializeTokenizationRequestData",
+            "PaymentGatewayInitializeTokenizationResponseData",
+        ],
+        "PaymentGatewayInitializeTokenizationResponseData",
+    ]
+
+    payment_method_initialize_tokenization: Callable[
+        [
+            "PaymentMethodInitializeTokenizationRequestData",
+            "PaymentMethodTokenizationResponseData",
+        ],
+        "PaymentMethodTokenizationResponseData",
+    ]
+
+    payment_method_process_tokenization: Callable[
+        [
+            "PaymentMethodProcessTokenizationRequestData",
+            "PaymentMethodTokenizationResponseData",
+        ],
+        "PaymentMethodTokenizationResponseData",
     ]
 
     # Trigger when menu is created.
@@ -975,6 +1011,12 @@ class BasePlugin:
     # Overwrite this method if you need to trigger specific logic after a product
     # variant metadata is updated.
     product_variant_metadata_updated: Callable[["ProductVariant", Any], Any]
+
+    # Trigger when a product export is completed.
+    #
+    # Overwrite this method if you need to trigger specific logic after a product
+    # export is completed.
+    product_export_completed: Callable[["ExportFile", None], None]
 
     refund_payment: Callable[["PaymentData", Any], GatewayResponse]
 

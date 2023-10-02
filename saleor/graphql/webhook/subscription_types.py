@@ -15,6 +15,9 @@ from ...order.utils import get_all_shipping_methods_for_order
 from ...page.models import PageTranslation
 from ...payment.interface import (
     ListStoredPaymentMethodsRequestData,
+    PaymentMethodInitializeTokenizationRequestData,
+    PaymentMethodProcessTokenizationRequestData,
+    PaymentMethodTokenizationBaseRequestData,
     StoredPaymentMethodRequestDeleteData,
     TransactionActionData,
     TransactionSessionData,
@@ -53,18 +56,20 @@ from ..core.descriptions import (
 from ..core.doc_category import (
     DOC_CATEGORY_CHECKOUT,
     DOC_CATEGORY_GIFT_CARDS,
+    DOC_CATEGORY_MISC,
     DOC_CATEGORY_ORDERS,
     DOC_CATEGORY_PAYMENTS,
     DOC_CATEGORY_PRODUCTS,
     DOC_CATEGORY_SHIPPING,
     DOC_CATEGORY_TAXES,
+    DOC_CATEGORY_USERS,
 )
 from ..core.scalars import JSON, PositiveDecimal
 from ..core.types import NonNullList, SubscriptionObjectType
 from ..core.types.order_or_checkout import OrderOrCheckout
 from ..order.dataloaders import OrderByIdLoader
 from ..order.types import Order, OrderGrantedRefund
-from ..payment.enums import TransactionActionEnum
+from ..payment.enums import TokenizedPaymentFlowEnum, TransactionActionEnum
 from ..payment.types import TransactionItem
 from ..plugins.dataloaders import plugin_manager_promise_callback
 from ..product.dataloaders import ProductVariantByIdLoader
@@ -187,11 +192,12 @@ class AccountConfirmed(SubscriptionObjectType, AccountOperationBase):
         enable_dry_run = False
         interfaces = (Event,)
         description = "Event sent when account is confirmed." + ADDED_IN_315
+        doc_category = DOC_CATEGORY_USERS
 
 
 class AccountConfirmationRequested(SubscriptionObjectType, AccountOperationBase):
     class Meta:
-        root_type = "User"
+        root_type = None
         enable_dry_run = False
         interfaces = (Event,)
         description = (
@@ -199,6 +205,7 @@ class AccountConfirmationRequested(SubscriptionObjectType, AccountOperationBase)
             " enableAccountConfirmationByEmail flag set to True is not required."
             + ADDED_IN_315
         )
+        doc_category = DOC_CATEGORY_USERS
 
 
 class AccountChangeEmailRequested(SubscriptionObjectType, AccountOperationBase):
@@ -207,12 +214,13 @@ class AccountChangeEmailRequested(SubscriptionObjectType, AccountOperationBase):
     )
 
     class Meta:
-        root_type = "User"
+        root_type = None
         enable_dry_run = False
         interfaces = (Event,)
         description = (
             "Event sent when account change email is requested." + ADDED_IN_315
         )
+        doc_category = DOC_CATEGORY_USERS
 
     @staticmethod
     def resolve_new_email(root, _info: ResolveInfo):
@@ -230,6 +238,7 @@ class AccountEmailChanged(SubscriptionObjectType, AccountOperationBase):
         enable_dry_run = False
         interfaces = (Event,)
         description = "Event sent when account email is changed." + ADDED_IN_315
+        doc_category = DOC_CATEGORY_USERS
 
 
 class AccountSetPasswordRequested(SubscriptionObjectType, AccountOperationBase):
@@ -240,14 +249,16 @@ class AccountSetPasswordRequested(SubscriptionObjectType, AccountOperationBase):
         description = (
             "Event sent when setting a new password is requested." + ADDED_IN_315
         )
+        doc_category = DOC_CATEGORY_USERS
 
 
 class AccountDeleteRequested(SubscriptionObjectType, AccountOperationBase):
     class Meta:
-        root_type = "User"
+        root_type = None
         enable_dry_run = False
         interfaces = (Event,)
         description = "Event sent when account delete is requested." + ADDED_IN_315
+        doc_category = DOC_CATEGORY_USERS
 
 
 class AccountDeleted(SubscriptionObjectType, AccountOperationBase):
@@ -256,6 +267,7 @@ class AccountDeleted(SubscriptionObjectType, AccountOperationBase):
         enable_dry_run = False
         interfaces = (Event,)
         description = "Event sent when account is deleted." + ADDED_IN_315
+        doc_category = DOC_CATEGORY_USERS
 
 
 class AddressBase(AbstractType):
@@ -626,6 +638,7 @@ class OrderBulkCreated(SubscriptionObjectType):
         description = (
             "Event sent when orders are imported." + ADDED_IN_314 + PREVIEW_FEATURE
         )
+        doc_category = DOC_CATEGORY_ORDERS
 
 
 class DraftOrderCreated(SubscriptionObjectType, OrderBase):
@@ -735,6 +748,25 @@ class GiftCardMetadataUpdated(SubscriptionObjectType, GiftCardBase):
         enable_dry_run = True
         interfaces = (Event,)
         description = "Event sent when gift card metadata is updated." + ADDED_IN_38
+
+
+class GiftCardExportCompleted(SubscriptionObjectType):
+    export = graphene.Field(
+        "saleor.graphql.csv.types.ExportFile",
+        description="The export file for gift cards.",
+    )
+
+    class Meta:
+        root_type = "ExportFile"
+        enable_dry_run = True
+        interfaces = (Event,)
+        description = "Event sent when gift card export is completed." + ADDED_IN_316
+        doc_category = DOC_CATEGORY_GIFT_CARDS
+
+    @staticmethod
+    def resolve_export(root, info: ResolveInfo):
+        _, export_file = root
+        return export_file
 
 
 class MenuBase(AbstractType):
@@ -1033,6 +1065,25 @@ class ProductVariantStockUpdated(SubscriptionObjectType, ProductVariantBase):
         return WarehouseByIdLoader(info.context).load(stock.warehouse_id)
 
 
+class ProductExportCompleted(SubscriptionObjectType):
+    export = graphene.Field(
+        "saleor.graphql.csv.types.ExportFile",
+        description="The export file for products.",
+    )
+
+    class Meta:
+        root_type = "ExportFile"
+        enable_dry_run = True
+        interfaces = (Event,)
+        description = "Event sent when product export is completed." + ADDED_IN_316
+        doc_category = DOC_CATEGORY_PRODUCTS
+
+    @staticmethod
+    def resolve_export(root, info: ResolveInfo):
+        _, export_file = root
+        return export_file
+
+
 class SaleBase(AbstractType):
     sale = graphene.Field(
         "saleor.graphql.discount.types.Sale",
@@ -1162,6 +1213,15 @@ class FulfillmentBase(AbstractType):
         return fulfillment.order
 
 
+class FulfillmentTrackingNumberUpdated(SubscriptionObjectType, FulfillmentBase):
+    class Meta:
+        root_type = "Fulfillment"
+        enable_dry_run = True
+        interfaces = (Event,)
+        description = "Event sent when the tracking number is updated." + ADDED_IN_316
+        doc_category = DOC_CATEGORY_ORDERS
+
+
 class FulfillmentCreated(SubscriptionObjectType, FulfillmentBase):
     notify_customer = graphene.Boolean(
         description=(
@@ -1172,11 +1232,11 @@ class FulfillmentCreated(SubscriptionObjectType, FulfillmentBase):
     )
 
     class Meta:
-        doc_category = DOC_CATEGORY_ORDERS
-        root_type = "Fulfillment"
+        root_type = None
         enable_dry_run = False
         interfaces = (Event,)
         description = "Event sent when new fulfillment is created." + ADDED_IN_34
+        doc_category = DOC_CATEGORY_ORDERS
 
     @staticmethod
     def resolve_fulfillment(root, info: ResolveInfo):
@@ -1209,11 +1269,11 @@ class FulfillmentApproved(SubscriptionObjectType, FulfillmentBase):
     )
 
     class Meta:
-        doc_category = DOC_CATEGORY_ORDERS
-        root_type = "Fulfillment"
+        root_type = None
         enable_dry_run = False
         interfaces = (Event,)
         description = "Event sent when fulfillment is approved." + ADDED_IN_37
+        doc_category = DOC_CATEGORY_ORDERS
 
     @staticmethod
     def resolve_fulfillment(root, info: ResolveInfo):
@@ -1611,6 +1671,7 @@ class StaffSetPasswordRequested(SubscriptionObjectType, AccountOperationBase):
             "Event sent when setting a new password for staff is requested."
             + ADDED_IN_315
         )
+        doc_category = DOC_CATEGORY_USERS
 
 
 class TransactionAction(SubscriptionObjectType, AbstractType):
@@ -1622,6 +1683,10 @@ class TransactionAction(SubscriptionObjectType, AbstractType):
     amount = PositiveDecimal(
         description="Transaction request amount. Null when action type is VOID.",
     )
+    currency = graphene.String(
+        description="Currency code." + ADDED_IN_316,
+        required=True,
+    )
 
     class Meta:
         doc_category = DOC_CATEGORY_PAYMENTS
@@ -1631,6 +1696,10 @@ class TransactionAction(SubscriptionObjectType, AbstractType):
         if root.action_value:
             return quantize_price(root.action_value, root.transaction.currency)
         return None
+
+    @staticmethod
+    def resolve_currency(root: TransactionActionData, _info: ResolveInfo):
+        return root.transaction.currency
 
 
 class TransactionActionBase(AbstractType):
@@ -1715,7 +1784,7 @@ class PaymentGatewayInitializeSession(SubscriptionObjectType):
     )
     data = graphene.Field(
         JSON,
-        description="Payment gateway data in JSON format, recieved from storefront.",
+        description="Payment gateway data in JSON format, received from storefront.",
     )
     amount = graphene.Field(
         PositiveDecimal,
@@ -1772,10 +1841,17 @@ class TransactionSessionBase(SubscriptionObjectType, AbstractType):
     )
     data = graphene.Field(
         JSON,
-        description="Payment gateway data in JSON format, recieved from storefront.",
+        description="Payment gateway data in JSON format, received from storefront.",
     )
     merchant_reference = graphene.String(
         description="Merchant reference assigned to this payment.", required=True
+    )
+    customer_ip_address = graphene.String(
+        description=(
+            "The customer's IP address. If not provided as a parameter in the "
+            "mutation, Saleor will try to determine the customer's IP address on its "
+            "own." + ADDED_IN_316
+        ),
     )
     action = graphene.Field(
         TransactionProcessAction,
@@ -1818,6 +1894,13 @@ class TransactionSessionBase(SubscriptionObjectType, AbstractType):
     ):
         _, transaction_session_data = root
         return transaction_session_data.action
+
+    @classmethod
+    def resolve_customer_ip_address(
+        cls, root: tuple[str, TransactionSessionData], _info: ResolveInfo
+    ):
+        _, transaction_session_data = root
+        return transaction_session_data.customer_ip_address
 
 
 class TransactionInitializeSession(TransactionSessionBase):
@@ -1966,6 +2049,127 @@ class StoredPaymentMethodDeleteRequested(SubscriptionObjectType):
         return payment_method_data.channel
 
 
+class PaymentMethodTokenizationBase(AbstractType):
+    user = graphene.Field(
+        UserType,
+        description="The user related to the requested action.",
+        required=True,
+    )
+    channel = graphene.Field(
+        "saleor.graphql.channel.types.Channel",
+        description="Channel related to the requested action.",
+        required=True,
+    )
+    data = graphene.Field(
+        JSON,
+        description="Payment gateway data in JSON format, received from storefront.",
+    )
+
+    @classmethod
+    def resolve_channel(
+        cls,
+        root: tuple[str, PaymentMethodTokenizationBaseRequestData],
+        _info: ResolveInfo,
+    ):
+        _, payment_method_data = root
+        return payment_method_data.channel
+
+    @classmethod
+    def resolve_user(
+        cls,
+        root: tuple[str, PaymentMethodTokenizationBaseRequestData],
+        _info: ResolveInfo,
+    ):
+        _, payment_method_data = root
+        return payment_method_data.user
+
+    @classmethod
+    def resolve_data(
+        cls,
+        root: tuple[str, PaymentMethodTokenizationBaseRequestData],
+        _info: ResolveInfo,
+    ):
+        _, payment_method_data = root
+        return payment_method_data.data
+
+
+class PaymentGatewayInitializeTokenizationSession(
+    SubscriptionObjectType, PaymentMethodTokenizationBase
+):
+    class Meta:
+        root_type = None
+        enable_dry_run = False
+        interfaces = (Event,)
+        description = (
+            "Event sent to initialize a new session in payment gateway to store the "
+            "payment method. " + ADDED_IN_316 + PREVIEW_FEATURE
+        )
+        doc_category = DOC_CATEGORY_PAYMENTS
+
+
+class PaymentMethodInitializeTokenizationSession(
+    SubscriptionObjectType, PaymentMethodTokenizationBase
+):
+    payment_flow_to_support = TokenizedPaymentFlowEnum(
+        description=(
+            "The payment flow that the tokenized payment method should support."
+        ),
+        required=True,
+    )
+
+    class Meta:
+        root_type = None
+        enable_dry_run = False
+        interfaces = (Event,)
+        description = (
+            "Event sent when user requests a tokenization of payment method."
+            + ADDED_IN_316
+            + PREVIEW_FEATURE
+        )
+        doc_category = DOC_CATEGORY_PAYMENTS
+
+    @classmethod
+    def resolve_payment_flow_to_support(
+        cls,
+        root: tuple[str, PaymentMethodInitializeTokenizationRequestData],
+        _info: ResolveInfo,
+    ):
+        _, payment_method_data = root
+        return payment_method_data.payment_flow_to_support
+
+
+class PaymentMethodProcessTokenizationSession(
+    SubscriptionObjectType, PaymentMethodTokenizationBase
+):
+    id = graphene.String(
+        description=(
+            "The ID returned by app from "
+            "`PAYMENT_METHOD_INITIALIZE_TOKENIZATION_SESSION` webhook."
+        ),
+        required=True,
+    )
+
+    class Meta:
+        root_type = None
+        enable_dry_run = False
+        interfaces = (Event,)
+        description = (
+            "Event sent when user continues a tokenization of payment method."
+            + ADDED_IN_316
+            + PREVIEW_FEATURE
+        )
+        doc_category = DOC_CATEGORY_PAYMENTS
+
+    @classmethod
+    def resolve_id(
+        cls,
+        root: tuple[str, PaymentMethodProcessTokenizationRequestData],
+        _info: ResolveInfo,
+    ):
+        _, payment_method_data = root
+        return payment_method_data.id
+
+
 class TranslationTypes(Union):
     class Meta:
         types = tuple(TRANSLATIONS_TYPES_MAP.values())
@@ -1996,6 +2200,7 @@ class TranslationCreated(SubscriptionObjectType, TranslationBase):
         enable_dry_run = False
         interfaces = (Event,)
         description = "Event sent when new translation is created." + ADDED_IN_32
+        doc_category = DOC_CATEGORY_MISC
 
 
 class TranslationUpdated(SubscriptionObjectType, TranslationBase):
@@ -2004,6 +2209,7 @@ class TranslationUpdated(SubscriptionObjectType, TranslationBase):
         enable_dry_run = False
         interfaces = (Event,)
         description = "Event sent when translation is updated." + ADDED_IN_32
+        doc_category = DOC_CATEGORY_MISC
 
 
 class VoucherBase(AbstractType):
@@ -2285,6 +2491,9 @@ class Subscription(SubscriptionObjectType):
         description="Look up subscription event." + ADDED_IN_32,
     )
 
+    class Meta:
+        doc_category = DOC_CATEGORY_MISC
+
     @staticmethod
     def resolve_event(root, info: ResolveInfo):
         return Observable.from_([root])
@@ -2303,6 +2512,7 @@ class ThumbnailCreated(SubscriptionObjectType):
         enable_dry_run = False
         interfaces = (Event,)
         description = "Event sent when thumbnail is created." + ADDED_IN_312
+        doc_category = DOC_CATEGORY_MISC
 
     @staticmethod
     def resolve_id(root, info: ResolveInfo):
@@ -2364,6 +2574,7 @@ WEBHOOK_TYPES_MAP = {
     WebhookEventAsyncType.GIFT_CARD_SENT: GiftCardSent,
     WebhookEventAsyncType.GIFT_CARD_STATUS_CHANGED: GiftCardStatusChanged,
     WebhookEventAsyncType.GIFT_CARD_METADATA_UPDATED: GiftCardMetadataUpdated,
+    WebhookEventAsyncType.GIFT_CARD_EXPORT_COMPLETED: GiftCardExportCompleted,
     WebhookEventAsyncType.MENU_CREATED: MenuCreated,
     WebhookEventAsyncType.MENU_UPDATED: MenuUpdated,
     WebhookEventAsyncType.MENU_DELETED: MenuDeleted,
@@ -2389,6 +2600,7 @@ WEBHOOK_TYPES_MAP = {
     WebhookEventAsyncType.PRODUCT_UPDATED: ProductUpdated,
     WebhookEventAsyncType.PRODUCT_DELETED: ProductDeleted,
     WebhookEventAsyncType.PRODUCT_METADATA_UPDATED: ProductMetadataUpdated,
+    WebhookEventAsyncType.PRODUCT_EXPORT_COMPLETED: ProductExportCompleted,
     WebhookEventAsyncType.PRODUCT_MEDIA_CREATED: ProductMediaCreated,
     WebhookEventAsyncType.PRODUCT_MEDIA_UPDATED: ProductMediaUpdated,
     WebhookEventAsyncType.PRODUCT_MEDIA_DELETED: ProductMediaDeleted,
@@ -2409,6 +2621,7 @@ WEBHOOK_TYPES_MAP = {
     WebhookEventAsyncType.INVOICE_DELETED: InvoiceDeleted,
     WebhookEventAsyncType.INVOICE_SENT: InvoiceSent,
     WebhookEventAsyncType.FULFILLMENT_CREATED: FulfillmentCreated,
+    WebhookEventAsyncType.FULFILLMENT_TRACKING_NUMBER_UPDATED: FulfillmentTrackingNumberUpdated,  # noqa: E501
     WebhookEventAsyncType.FULFILLMENT_CANCELED: FulfillmentCanceled,
     WebhookEventAsyncType.FULFILLMENT_APPROVED: FulfillmentApproved,
     WebhookEventAsyncType.FULFILLMENT_METADATA_UPDATED: FulfillmentMetadataUpdated,
@@ -2487,5 +2700,14 @@ WEBHOOK_TYPES_MAP = {
     WebhookEventSyncType.LIST_STORED_PAYMENT_METHODS: ListStoredPaymentMethods,
     WebhookEventSyncType.STORED_PAYMENT_METHOD_DELETE_REQUESTED: (
         StoredPaymentMethodDeleteRequested
+    ),
+    WebhookEventSyncType.PAYMENT_GATEWAY_INITIALIZE_TOKENIZATION_SESSION: (
+        PaymentGatewayInitializeTokenizationSession
+    ),
+    WebhookEventSyncType.PAYMENT_METHOD_INITIALIZE_TOKENIZATION_SESSION: (
+        PaymentMethodInitializeTokenizationSession
+    ),
+    WebhookEventSyncType.PAYMENT_METHOD_PROCESS_TOKENIZATION_SESSION: (
+        PaymentMethodProcessTokenizationSession
     ),
 }

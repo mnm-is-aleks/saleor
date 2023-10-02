@@ -1,6 +1,5 @@
 import pytest
 
-from ..channel.utils import create_channel
 from ..product.utils import (
     create_category,
     create_product,
@@ -9,29 +8,20 @@ from ..product.utils import (
     create_product_variant_channel_listing,
     raw_create_product_channel_listing,
 )
+from ..shop.utils.preparing_shop import prepare_shop
 from ..utils import assign_permissions
-from ..warehouse.utils import create_warehouse
 from .utils import raw_checkout_create
 
 
-def prepare_product(
+def prepare_unavailable_product(
     e2e_staff_api_client,
-    permission_manage_products,
-    permission_manage_channels,
-    permission_manage_product_types_and_attributes,
 ):
-    permissions = [
-        permission_manage_products,
-        permission_manage_channels,
-        permission_manage_product_types_and_attributes,
-    ]
-
-    assign_permissions(e2e_staff_api_client, permissions)
-    warehouse_data = create_warehouse(e2e_staff_api_client)
-
-    channel_data = create_channel(e2e_staff_api_client, warehouse_data["id"])
-    channel_id = channel_data["id"]
-    channel_slug = channel_data["slug"]
+    (
+        warehouse_id,
+        channel_id,
+        channel_slug,
+        _shipping_method_id,
+    ) = prepare_shop(e2e_staff_api_client)
 
     product_type_data = create_product_type(
         e2e_staff_api_client,
@@ -64,12 +54,14 @@ def prepare_product(
 
     stocks = [
         {
-            "warehouse": warehouse_data["id"],
+            "warehouse": warehouse_id,
             "quantity": 5,
         }
     ]
     variant_data = create_product_variant(
-        e2e_staff_api_client, product_id, stocks=stocks
+        e2e_staff_api_client,
+        product_id,
+        stocks=stocks,
     )
     variant_id = variant_data["id"]
 
@@ -77,6 +69,7 @@ def prepare_product(
         e2e_staff_api_client,
         variant_id,
         channel_id,
+        price=10,
     )
 
     return variant_id, channel_slug
@@ -89,19 +82,36 @@ def test_should_not_be_able_to_buy_unavailable_product_core_0108(
     permission_manage_products,
     permission_manage_channels,
     permission_manage_product_types_and_attributes,
+    permission_manage_shipping,
 ):
     # Before
-    variant_id, channel_slug = prepare_product(
-        e2e_staff_api_client,
+    permissions = [
         permission_manage_products,
         permission_manage_channels,
         permission_manage_product_types_and_attributes,
+        permission_manage_shipping,
+    ]
+
+    assign_permissions(e2e_staff_api_client, permissions)
+    (
+        variant_id,
+        channel_slug,
+    ) = prepare_unavailable_product(
+        e2e_staff_api_client,
     )
+
     # Step 1 - Create checkout with non available for purchase product
     lines = [
-        {"variantId": variant_id, "quantity": 1},
+        {
+            "variantId": variant_id,
+            "quantity": 1,
+        },
     ]
-    checkout_data = raw_checkout_create(e2e_logged_api_client, lines, channel_slug)
+    checkout_data = raw_checkout_create(
+        e2e_logged_api_client,
+        lines,
+        channel_slug,
+    )
 
     errors = checkout_data["errors"]
     assert errors[0]["code"] == "PRODUCT_UNAVAILABLE_FOR_PURCHASE"

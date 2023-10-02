@@ -1,8 +1,9 @@
 import json
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import graphene
 import pytest
+from django.core.files import File
 from freezegun import freeze_time
 
 from .....channel.models import Channel
@@ -13,7 +14,10 @@ from .....product.models import Category
 from .....shipping.models import ShippingMethod, ShippingZone
 from .....site.models import SiteSettings
 from .....webhook.event_types import WebhookEventAsyncType, WebhookEventSyncType
-from ...tasks import create_deliveries_for_subscriptions, logger
+from .....webhook.transport.asynchronous.transport import (
+    create_deliveries_for_subscriptions,
+    logger,
+)
 from . import subscription_queries
 from .payloads import (
     generate_account_events_payload,
@@ -25,6 +29,7 @@ from .payloads import (
     generate_category_payload,
     generate_collection_payload,
     generate_customer_payload,
+    generate_export_payload,
     generate_fulfillment_payload,
     generate_gift_card_payload,
     generate_invoice_payload,
@@ -773,6 +778,32 @@ def test_gift_card_metadata_updated(
     assert deliveries[0].webhook == webhooks[0]
 
 
+def test_gift_card_export_completed(
+    user_export_file, tmpdir, subscription_gift_card_export_completed_webhook
+):
+    # given
+    file_mock = MagicMock(spec=File)
+    file_mock.name = "temp_file.csv"
+
+    user_export_file.content_file = file_mock
+    user_export_file.save()
+
+    webhooks = [subscription_gift_card_export_completed_webhook]
+    event_type = WebhookEventAsyncType.GIFT_CARD_EXPORT_COMPLETED
+    gift_card_id = graphene.Node.to_global_id("ExportFile", user_export_file.id)
+
+    # when
+    deliveries = create_deliveries_for_subscriptions(
+        event_type, user_export_file, webhooks
+    )
+
+    # then
+    expected_payload = generate_export_payload(user_export_file, gift_card_id)
+    assert deliveries[0].payload.payload == expected_payload
+    assert len(deliveries) == len(webhooks)
+    assert deliveries[0].webhook == webhooks[0]
+
+
 def test_menu_created(menu, subscription_menu_created_webhook):
     # given
     webhooks = [subscription_menu_created_webhook]
@@ -1197,6 +1228,32 @@ def test_product_metadata_updated(
     deliveries = create_deliveries_for_subscriptions(event_type, product, webhooks)
     expected_payload = json.dumps({"product": {"id": product_id}})
 
+    assert deliveries[0].payload.payload == expected_payload
+    assert len(deliveries) == len(webhooks)
+    assert deliveries[0].webhook == webhooks[0]
+
+
+def test_product_export_completed(
+    user_export_file, tmpdir, subscription_product_export_completed_webhook
+):
+    # given
+    file_mock = MagicMock(spec=File)
+    file_mock.name = "temp_file.csv"
+
+    user_export_file.content_file = file_mock
+    user_export_file.save()
+
+    webhooks = [subscription_product_export_completed_webhook]
+    event_type = WebhookEventAsyncType.PRODUCT_EXPORT_COMPLETED
+    export_id = graphene.Node.to_global_id("ExportFile", user_export_file.id)
+
+    # when
+    deliveries = create_deliveries_for_subscriptions(
+        event_type, user_export_file, webhooks
+    )
+
+    # then
+    expected_payload = generate_export_payload(user_export_file, export_id)
     assert deliveries[0].payload.payload == expected_payload
     assert len(deliveries) == len(webhooks)
     assert deliveries[0].webhook == webhooks[0]
@@ -1717,6 +1774,23 @@ def test_fulfillment_metadata_updated(
     # given
     webhooks = [subscription_fulfillment_metadata_updated_webhook]
     event_type = WebhookEventAsyncType.FULFILLMENT_METADATA_UPDATED
+    expected_payload = generate_fulfillment_payload(fulfillment)
+
+    # when
+    deliveries = create_deliveries_for_subscriptions(event_type, fulfillment, webhooks)
+
+    # then
+    assert deliveries[0].payload.payload == json.dumps(expected_payload)
+    assert len(deliveries) == len(webhooks)
+    assert deliveries[0].webhook == webhooks[0]
+
+
+def test_fulfillment_tracking_number_updated(
+    fulfillment, subscription_fulfillment_tracking_number_updated
+):
+    # given
+    webhooks = [subscription_fulfillment_tracking_number_updated]
+    event_type = WebhookEventAsyncType.FULFILLMENT_TRACKING_NUMBER_UPDATED
     expected_payload = generate_fulfillment_payload(fulfillment)
 
     # when

@@ -40,9 +40,16 @@ from ..payment.interface import (
     PaymentData,
     PaymentGateway,
     PaymentGatewayData,
+    PaymentGatewayInitializeTokenizationRequestData,
+    PaymentGatewayInitializeTokenizationResponseData,
+    PaymentGatewayInitializeTokenizationResult,
     PaymentMethodData,
+    PaymentMethodProcessTokenizationRequestData,
+    PaymentMethodTokenizationResponseData,
+    PaymentMethodTokenizationResult,
     StoredPaymentMethodRequestDeleteData,
     StoredPaymentMethodRequestDeleteResponseData,
+    StoredPaymentMethodRequestDeleteResult,
     TokenConfig,
     TransactionActionData,
     TransactionSessionData,
@@ -59,6 +66,7 @@ if TYPE_CHECKING:
     from ..checkout.fetch import CheckoutInfo, CheckoutLineInfo
     from ..checkout.models import Checkout
     from ..core.middleware import Requestor
+    from ..csv.models import ExportFile
     from ..discount.models import Sale, Voucher
     from ..giftcard.models import GiftCard
     from ..invoice.models import Invoice
@@ -508,9 +516,9 @@ class PluginsManager(PaymentInterface):
         lines: Iterable["CheckoutLineInfo"],
         checkout_line_info: "CheckoutLineInfo",
         address: Optional["Address"],
-        unit_price: TaxedMoney,
+        price: TaxedMoney,
     ) -> Decimal:
-        default_value = calculate_tax_rate(unit_price)
+        default_value = calculate_tax_rate(price)
         return self.__run_method_on_plugins(
             "get_checkout_line_tax_rate",
             default_value,
@@ -697,6 +705,12 @@ class PluginsManager(PaymentInterface):
         default_value = None
         self.__run_method_on_plugins(
             "product_variant_metadata_updated", default_value, product_variant
+        )
+
+    def product_export_completed(self, export: "ExportFile"):
+        default_value = None
+        return self.__run_method_on_plugins(
+            "product_export_completed", default_value, export
         )
 
     def order_created(self, order: "Order"):
@@ -1283,6 +1297,12 @@ class PluginsManager(PaymentInterface):
             "gift_card_metadata_updated", default_value, gift_card
         )
 
+    def gift_card_export_completed(self, export: "ExportFile"):
+        default_value = None
+        return self.__run_method_on_plugins(
+            "gift_card_export_completed", default_value, export
+        )
+
     def menu_created(self, menu: "Menu"):
         default_value = None
         return self.__run_method_on_plugins("menu_created", default_value, menu)
@@ -1551,12 +1571,64 @@ class PluginsManager(PaymentInterface):
         request_delete_data: "StoredPaymentMethodRequestDeleteData",
     ) -> "StoredPaymentMethodRequestDeleteResponseData":
         default_response = StoredPaymentMethodRequestDeleteResponseData(
-            success=False, message="Payment method request delete failed to deliver."
+            result=StoredPaymentMethodRequestDeleteResult.FAILED_TO_DELIVER,
+            error="Payment method request delete failed to deliver.",
         )
         response = self.__run_method_on_plugins(
             "stored_payment_method_request_delete",
             default_response,
             request_delete_data,
+        )
+        return response
+
+    def payment_gateway_initialize_tokenization(
+        self,
+        request_data: "PaymentGatewayInitializeTokenizationRequestData",
+    ) -> "PaymentGatewayInitializeTokenizationResponseData":
+        default_response = PaymentGatewayInitializeTokenizationResponseData(
+            result=PaymentGatewayInitializeTokenizationResult.FAILED_TO_DELIVER,
+            error="Payment gateway initialize tokenization failed to deliver.",
+            data=None,
+        )
+
+        response = self.__run_method_on_plugins(
+            "payment_gateway_initialize_tokenization",
+            default_response,
+            request_data,
+        )
+        return response
+
+    def payment_method_initialize_tokenization(
+        self,
+        request_data: "PaymentMethodProcessTokenizationRequestData",
+    ) -> "PaymentMethodTokenizationResponseData":
+        default_response = PaymentMethodTokenizationResponseData(
+            result=PaymentMethodTokenizationResult.FAILED_TO_DELIVER,
+            error="Payment method initialize tokenization failed to deliver.",
+            data=None,
+        )
+
+        response = self.__run_method_on_plugins(
+            "payment_method_initialize_tokenization",
+            default_response,
+            request_data,
+        )
+        return response
+
+    def payment_method_process_tokenization(
+        self,
+        request_data: "PaymentMethodProcessTokenizationRequestData",
+    ) -> "PaymentMethodTokenizationResponseData":
+        default_response = PaymentMethodTokenizationResponseData(
+            result=PaymentMethodTokenizationResult.FAILED_TO_DELIVER,
+            error="Payment method process tokenization failed to deliver.",
+            data=None,
+        )
+
+        response = self.__run_method_on_plugins(
+            "payment_method_process_tokenization",
+            default_response,
+            request_data,
         )
         return response
 

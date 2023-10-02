@@ -97,3 +97,28 @@ class StoredPaymentMethodRequestDeleteErrorCode(Enum):
     INVALID = "invalid"
     NOT_FOUND = "not_found"
     CHANNEL_INACTIVE = "channel_inactive"
+    GATEWAY_ERROR = "gateway_error"
+
+
+class PaymentGatewayInitializeTokenizationErrorCode(Enum):
+    GRAPHQL_ERROR = "graphql_error"
+    INVALID = "invalid"
+    NOT_FOUND = "not_found"
+    CHANNEL_INACTIVE = "channel_inactive"
+    GATEWAY_ERROR = "gateway_error"
+
+
+class PaymentMethodInitializeTokenizationErrorCode(Enum):
+    GRAPHQL_ERROR = "graphql_error"
+    INVALID = "invalid"
+    NOT_FOUND = "not_found"
+    CHANNEL_INACTIVE = "channel_inactive"
+    GATEWAY_ERROR = "gateway_error"
+
+
+class PaymentMethodProcessTokenizationErrorCode(Enum):
+    GRAPHQL_ERROR = "graphql_error"
+    INVALID = "invalid"
+    NOT_FOUND = "not_found"
+    CHANNEL_INACTIVE = "channel_inactive"
+    GATEWAY_ERROR = "gateway_error"

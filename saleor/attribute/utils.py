@@ -31,7 +31,6 @@ def associate_attribute_values_to_instance(
     assigned will be overridden by this call.
     """
     values_ids = {value.pk for value in values}
-
     # Ensure the values are actually form the given attribute
     validate_attribute_owns_values(attribute, values_ids)
 
@@ -44,9 +43,12 @@ def validate_attribute_owns_values(attribute: Attribute, value_ids: Set[int]) ->
 
     :raise: AssertionError
     """
-    attribute_actual_value_ids = set(attribute.values.values_list("pk", flat=True))
-    found_associated_ids = attribute_actual_value_ids & value_ids
-    if found_associated_ids != value_ids:
+    attribute_actual_value_ids = set(
+        AttributeValue.objects.filter(
+            pk__in=value_ids, attribute=attribute
+        ).values_list("pk", flat=True)
+    )
+    if attribute_actual_value_ids != value_ids:
         raise AssertionError("Some values are not from the provided attribute.")
 
 

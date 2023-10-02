@@ -8,6 +8,7 @@ from ..core.descriptions import (
     ADDED_IN_313,
     ADDED_IN_314,
     ADDED_IN_315,
+    ADDED_IN_316,
     DEPRECATED_IN_3X_ENUM_VALUE,
     PREVIEW_FEATURE,
 )
@@ -96,6 +97,9 @@ WEBHOOK_EVENT_DESCRIPTION = {
     WebhookEventAsyncType.GIFT_CARD_METADATA_UPDATED: (
         "A gift card metadata is updated." + ADDED_IN_38
     ),
+    WebhookEventAsyncType.GIFT_CARD_EXPORT_COMPLETED: (
+        "A gift card export is completed." + ADDED_IN_316
+    ),
     WebhookEventAsyncType.INVOICE_REQUESTED: "An invoice for order requested.",
     WebhookEventAsyncType.INVOICE_DELETED: "An invoice is deleted.",
     WebhookEventAsyncType.INVOICE_SENT: "Invoice has been sent.",
@@ -105,7 +109,13 @@ WEBHOOK_EVENT_DESCRIPTION = {
     WebhookEventAsyncType.MENU_ITEM_CREATED: "A new menu item created.",
     WebhookEventAsyncType.MENU_ITEM_UPDATED: "A menu item is updated.",
     WebhookEventAsyncType.MENU_ITEM_DELETED: "A menu item is deleted.",
-    WebhookEventAsyncType.NOTIFY_USER: "User notification triggered.",
+    WebhookEventAsyncType.NOTIFY_USER: (
+        "User notification triggered."
+        + DEPRECATED_IN_3X_ENUM_VALUE
+        + " See the docs for more details about migrating from NOTIFY_USER to other "
+        "events: "
+        + "https://docs.saleor.io/docs/next/upgrade-guides/notify-user-deprecation"
+    ),
     WebhookEventAsyncType.ORDER_CREATED: "A new order is placed.",
     WebhookEventAsyncType.ORDER_CONFIRMED: order_confirmed_event_enum_description,
     WebhookEventAsyncType.ORDER_PAID: (
@@ -182,6 +192,9 @@ WEBHOOK_EVENT_DESCRIPTION = {
     ),
     WebhookEventAsyncType.PRODUCT_VARIANT_STOCK_UPDATED: (
         "A product variant stock is updated"
+    ),
+    WebhookEventAsyncType.PRODUCT_EXPORT_COMPLETED: (
+        "A product export is completed." + ADDED_IN_316
     ),
     WebhookEventAsyncType.SHIPPING_PRICE_CREATED: "A new shipping price is created.",
     WebhookEventAsyncType.SHIPPING_PRICE_UPDATED: "A shipping price is updated.",

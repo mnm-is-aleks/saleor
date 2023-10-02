@@ -1,3 +1,4 @@
+from django.contrib.postgres.indexes import BTreeIndex
 from django.db import models
 
 from ...core.models import SortableModel
@@ -18,10 +19,19 @@ class AssignedPageAttributeValue(SortableModel):
         null=True,
         blank=False,
     )
+    page = models.ForeignKey(
+        Page,
+        related_name="attributevalues",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        db_index=False,
+    )
 
     class Meta:
         unique_together = (("value", "page"),)
         ordering = ("sort_order", "pk")
+        indexes = [BTreeIndex(fields=["page"], name="assignedpageattrvalue_page_idx")]
 
     def get_ordering_queryset(self):
         return self.page.attributevalues.all()  # type: ignore[union-attr]

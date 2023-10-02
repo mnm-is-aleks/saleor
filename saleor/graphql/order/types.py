@@ -699,6 +699,11 @@ class OrderLine(ModelObjectType[models.OrderLine]):
     total_price = graphene.Field(
         TaxedMoney, description="Price of the order line.", required=True
     )
+    undiscounted_total_price = graphene.Field(
+        TaxedMoney,
+        description="Price of the order line without discounts.",
+        required=True,
+    )
     variant = graphene.Field(
         ProductVariant,
         required=False,
@@ -995,6 +1000,7 @@ class Order(ModelObjectType[models.Order]):
             "and later, for other orders requires one of the following permissions: "
             f"{AccountPermissions.MANAGE_USERS.name}, "
             f"{OrderPermissions.MANAGE_ORDERS.name}, "
+            f"{PaymentPermissions.HANDLE_PAYMENTS.name}, "
             f"{AuthorizationFilters.OWNER.name}."
         ),
     )
@@ -1792,6 +1798,7 @@ class Order(ModelObjectType[models.Order]):
                 user,
                 AccountPermissions.MANAGE_USERS,
                 OrderPermissions.MANAGE_ORDERS,
+                PaymentPermissions.HANDLE_PAYMENTS,
             )
             return user
 

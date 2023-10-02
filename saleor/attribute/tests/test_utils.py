@@ -71,7 +71,7 @@ def test_associate_attribute_to_product_instance_multiple_values(
     assert new_assignment.pk == old_assignment.pk
     assert new_assignment.values.count() == 2
     assert list(
-        new_assignment.productvalueassignment.values_list("value__pk", "sort_order")
+        new_assignment.productvalueassignment.values_list("value_id", "sort_order")
     ) == [(values[1].pk, 0), (values[0].pk, 1)]
 
 
@@ -113,5 +113,5 @@ def test_associate_attribute_to_variant_instance_multiple_values(
     # Ensure the new assignment was created and ordered correctly
     assert new_assignment.values.count() == 2
     assert list(
-        new_assignment.variantvalueassignment.values_list("value__pk", "sort_order")
+        new_assignment.variantvalueassignment.values_list("value_id", "sort_order")
     ) == [(values[0].pk, 0), (values[1].pk, 1)]

@@ -63,6 +63,7 @@ class WebhookEventAsyncType:
     GIFT_CARD_SENT = "gift_card_sent"
     GIFT_CARD_STATUS_CHANGED = "gift_card_status_changed"
     GIFT_CARD_METADATA_UPDATED = "gift_card_metadata_updated"
+    GIFT_CARD_EXPORT_COMPLETED = "gift_card_export_completed"
 
     MENU_CREATED = "menu_created"
     MENU_UPDATED = "menu_updated"
@@ -88,6 +89,7 @@ class WebhookEventAsyncType:
     FULFILLMENT_CANCELED = "fulfillment_canceled"
     FULFILLMENT_APPROVED = "fulfillment_approved"
     FULFILLMENT_METADATA_UPDATED = "fulfillment_metadata_updated"
+    FULFILLMENT_TRACKING_NUMBER_UPDATED = "fulfillment_tracking_number_updated"
 
     DRAFT_ORDER_CREATED = "draft_order_created"
     DRAFT_ORDER_UPDATED = "draft_order_updated"
@@ -116,6 +118,7 @@ class WebhookEventAsyncType:
     PRODUCT_UPDATED = "product_updated"
     PRODUCT_DELETED = "product_deleted"
     PRODUCT_METADATA_UPDATED = "product_metadata_updated"
+    PRODUCT_EXPORT_COMPLETED = "product_export_completed"
 
     PRODUCT_MEDIA_CREATED = "product_media_created"
     PRODUCT_MEDIA_UPDATED = "product_media_updated"
@@ -135,7 +138,7 @@ class WebhookEventAsyncType:
     CHECKOUT_FULLY_PAID = "checkout_fully_paid"
     CHECKOUT_METADATA_UPDATED = "checkout_metadata_updated"
 
-    NOTIFY_USER = "notify_user"
+    NOTIFY_USER = "notify_user"  # deprecated
 
     PAGE_CREATED = "page_created"
     PAGE_UPDATED = "page_updated"
@@ -321,6 +324,10 @@ class WebhookEventAsyncType:
             "name": "Gift card metadata updated",
             "permission": GiftcardPermissions.MANAGE_GIFT_CARD,
         },
+        GIFT_CARD_EXPORT_COMPLETED: {
+            "name": "Gift card export completed",
+            "permission": GiftcardPermissions.MANAGE_GIFT_CARD,
+        },
         MENU_CREATED: {
             "name": "Menu created",
             "permission": MenuPermissions.MANAGE_MENUS,
@@ -409,6 +416,10 @@ class WebhookEventAsyncType:
             "name": "Fulfillment metadata updated",
             "permission": OrderPermissions.MANAGE_ORDERS,
         },
+        FULFILLMENT_TRACKING_NUMBER_UPDATED: {
+            "name": "Fulfillment tracking number updated.",
+            "permission": OrderPermissions.MANAGE_ORDERS,
+        },
         DRAFT_ORDER_CREATED: {
             "name": "Draft order created",
             "permission": OrderPermissions.MANAGE_ORDERS,
@@ -495,6 +506,10 @@ class WebhookEventAsyncType:
         },
         PRODUCT_METADATA_UPDATED: {
             "name": "Product metadata updated",
+            "permission": ProductPermissions.MANAGE_PRODUCTS,
+        },
+        PRODUCT_EXPORT_COMPLETED: {
+            "name": "Product export completed",
             "permission": ProductPermissions.MANAGE_PRODUCTS,
         },
         PRODUCT_MEDIA_CREATED: {
@@ -735,6 +750,16 @@ class WebhookEventSyncType:
     LIST_STORED_PAYMENT_METHODS = "list_stored_payment_methods"
     STORED_PAYMENT_METHOD_DELETE_REQUESTED = "stored_payment_method_delete_requested"
 
+    PAYMENT_GATEWAY_INITIALIZE_TOKENIZATION_SESSION = (
+        "payment_gateway_initialize_tokenization_session"
+    )
+    PAYMENT_METHOD_INITIALIZE_TOKENIZATION_SESSION = (
+        "payment_method_initialize_tokenization_session"
+    )
+    PAYMENT_METHOD_PROCESS_TOKENIZATION_SESSION = (
+        "payment_method_process_tokenization_session"
+    )
+
     EVENT_MAP: dict[str, dict[str, Any]] = {
         PAYMENT_LIST_GATEWAYS: {
             "name": "List payment gateways",
@@ -814,6 +839,18 @@ class WebhookEventSyncType:
         },
         STORED_PAYMENT_METHOD_DELETE_REQUESTED: {
             "name": "Request deletion of a tokenized payment method.",
+            "permission": PaymentPermissions.HANDLE_PAYMENTS,
+        },
+        PAYMENT_GATEWAY_INITIALIZE_TOKENIZATION_SESSION: {
+            "name": "Initialize payment gateway tokenization session.",
+            "permission": PaymentPermissions.HANDLE_PAYMENTS,
+        },
+        PAYMENT_METHOD_INITIALIZE_TOKENIZATION_SESSION: {
+            "name": "Initialize payment method tokenization session.",
+            "permission": PaymentPermissions.HANDLE_PAYMENTS,
+        },
+        PAYMENT_METHOD_PROCESS_TOKENIZATION_SESSION: {
+            "name": "Process payment method tokenization.",
             "permission": PaymentPermissions.HANDLE_PAYMENTS,
         },
     }

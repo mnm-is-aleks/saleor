@@ -11,7 +11,9 @@ from .....payment.interface import TransactionActionData
 from .....payment.models import TransactionItem
 from .....webhook.event_types import WebhookEventSyncType
 from .....webhook.models import Webhook
-from ...tasks import create_deliveries_for_subscriptions
+from .....webhook.transport.asynchronous.transport import (
+    create_deliveries_for_subscriptions,
+)
 
 TRANSACTION_CHARGE_REQUESTED_SUBSCRIPTION = (
     fragments.TRANSACTION_ITEM_DETAILS
@@ -25,6 +27,7 @@ subscription {
       action {
         actionType
         amount
+        currency
       }
     }
   }
@@ -98,5 +101,6 @@ def test_transaction_charge_request(order, webhook_app, permission_manage_paymen
         "action": {
             "actionType": "CHARGE",
             "amount": quantize_price(action_value, "USD"),
+            "currency": "USD",
         },
     }
